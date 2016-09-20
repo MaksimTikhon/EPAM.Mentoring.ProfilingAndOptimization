@@ -14,15 +14,13 @@ namespace ProfileSample.Controllers
 		public ActionResult Index()
 		{
 			var context = new ProfileSampleEntities();
-
-			var sources = context.ImgSources.Take(20).Select(x => x.Id);
+			
+			var sources = context.ImgSources.Take(20);
 
 			var model = new List<ImageModel>();
 
-			foreach (var id in sources)
+			foreach (var item in sources)
 			{
-				var item = context.ImgSources.Find(id);
-
 				var obj = new ImageModel()
 				{
 					Name = item.Name,
@@ -38,27 +36,30 @@ namespace ProfileSample.Controllers
 		public ActionResult Convert()
 		{
 			var files = Directory.GetFiles(Server.MapPath("~/Content/Img"), "*.jpg");
+			var images = new List<ImgSource>(files.Length);
+
+			foreach (var file in files)
+			{
+				using (var stream = new FileStream(file, FileMode.Open))
+				{
+					byte[] buff = new byte[stream.Length];
+
+					stream.Read(buff, 0, (int)stream.Length);
+
+					var entity = new ImgSource()
+					{
+						Name = Path.GetFileName(file),
+						Data = buff,
+					};
+
+					images.Add(entity);				
+				}
+			}
 
 			using (var context = new ProfileSampleEntities())
 			{
-				foreach (var file in files)
-				{
-					using (var stream = new FileStream(file, FileMode.Open))
-					{
-						byte[] buff = new byte[stream.Length];
-
-						stream.Read(buff, 0, (int)stream.Length);
-
-						var entity = new ImgSource()
-						{
-							Name = Path.GetFileName(file),
-							Data = buff,
-						};
-
-						context.ImgSources.Add(entity);
-						context.SaveChanges();
-					}
-				}
+				context.ImgSources.AddRange(images);
+				context.SaveChanges();
 			}
 
 			return RedirectToAction("Index");
